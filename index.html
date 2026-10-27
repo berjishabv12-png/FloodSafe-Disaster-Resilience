@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FloodSafe Dashboard</title>
+<style>
+:root{--navy:#10355b;--blue:#1c68b4;--bg:#f4f8fc;--ink:#20364b;--muted:#63778b}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:var(--ink);background:var(--bg)}
+header{background:linear-gradient(100deg,var(--navy),var(--blue));color:white;padding:24px clamp(18px,4vw,54px)}
+h1{margin:0 0 6px;font-size:clamp(26px,3vw,36px)}header p{margin:0;opacity:.9}
+main{max-width:1150px;margin:24px auto;padding:0 18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.card{background:white;border:1px solid #d8e4ef;border-radius:14px;padding:20px;box-shadow:0 4px 16px #10355b0b}
+.label{color:var(--muted);font-size:14px;margin-bottom:9px}.value{font-size:clamp(27px,4vw,38px);font-weight:700;overflow-wrap:anywhere}
+.status{display:inline-block;border-radius:30px;padding:8px 13px;font-weight:700;font-size:14px}
+.LOW{background:#dff5e8;color:#137548}.CAUTION{background:#fff0cb;color:#8c5b00}.HIGH{background:#ffe1e4;color:#ad2635}.UNKNOWN{background:#e8edf2;color:#536273}
+.meta{color:var(--muted);font-size:13px;margin-top:12px;overflow-wrap:anywhere}
+.notice{margin-top:16px;background:#fff8e8;border:1px solid #f0dca7;border-radius:12px;padding:14px 16px;line-height:1.5}
+footer{text-align:center;padding:24px 12px 32px;color:var(--muted);font-size:12px}
+</style></head>
+<body><header><h1>≈ FloodSafe</h1><p>Flood-aware road monitoring prototype · Monitor · Detect · Inform</p></header>
+<main><div class="grid" id="cards"><section class="card"><div class="label">Sensor status</div><div class="value">Waiting…</div><div class="meta">Waiting for the first ESP32 reading.</div></section></div>
+<section class="notice"><strong>Prototype notice:</strong> This reading describes the sensor location only. Demo thresholds are not official safety standards. Missing or stale data is UNKNOWN. Do not use this dashboard alone to decide whether a road is safe.</section>
+<div class="meta" id="updated">Checking for updates…</div></main><footer>FloodSafe · Local demonstration dashboard</footer>
+<script>
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function cls(s){if(s==="LOW")return"LOW";if(s==="CAUTION")return"CAUTION";if(s==="HIGH WATER")return"HIGH";return"UNKNOWN";}
+async function refresh(){const el=document.getElementById("cards");try{
+ const res=await fetch("/api/roads",{cache:"no-store"});if(!res.ok)throw Error("Server "+res.status);const data=await res.json();
+ if(!data.roads.length){el.innerHTML='<section class="card"><div class="label">No sensor data yet</div><div class="value">Waiting…</div><div class="meta">Start the ESP32 and check its Wi-Fi and server URL.</div></section>';}
+ else{el.innerHTML=data.roads.map(r=>`<section class="card"><div class="label">Road / Sensor ID</div><div class="value">${esc(r.road_id)}</div><div class="label" style="margin-top:18px">Estimated water depth</div><div class="value">${Number(r.water_depth_cm).toFixed(1)} <span style="font-size:17px">cm</span></div><p><span class="status ${cls(r.status)}">${esc(r.status)}</span></p><div class="meta">Distance to surface: ${Number(r.distance_cm).toFixed(1)} cm</div><div class="meta">Last update: ${esc(r.last_updated)} · Data age: ${r.age_seconds}s</div></section>`).join("");}
+ document.getElementById("updated").textContent="Dashboard refreshed: "+new Date().toLocaleTimeString();
+ }catch(e){el.innerHTML='<section class="card"><div class="label">Server status</div><div class="value">Offline</div><div class="meta">Check that app.py is running.</div></section>';document.getElementById("updated").textContent="Update failed: "+e.message;}}
+refresh();setInterval(refresh,3000);
+</script></body></html>
